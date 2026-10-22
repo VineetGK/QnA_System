@@ -1,0 +1,19 @@
+# Model checkpoints and training outputs
+output/
+my_gpt2_generator/
+my_bart_generator/
+checkpoint-*/
+wandb/
+
+# Downloaded data and generated predictions
+data.zip
+kaggle_3_*.csv
+stage_1_prediction.csv
+simple_baseline1.csv
+
+# Python / Jupyter
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/

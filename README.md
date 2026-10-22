@@ -3,12 +3,12 @@
 
 ## Overview
 
-Welcome to the Q\&A System! This project shows how to build a question-answering (QA) pipeline in two simple steps:
+This project builds a biomedical question-answering (QA) pipeline using retrieval-augmented generation (RAG). It has two steps:
 
-1. **Retriever**: Imagine you have a huge library of books and you need to find the right pages with the answers. The retriever searches through many documents and picks out the most relevant snippets.
-2. **Generator**: Once you have the right snippets, the generator reads them and writes a clear, friendly answer—just like a teacher explaining to a class.
+1. **Retriever**: Imagine you have a huge library of books and you need to find the right pages with the answers. The retriever searches through about 40,000 biomedical passages and picks out the most relevant ones. It is `sentence-transformers/all-mpnet-base-v2`, fine-tuned on question/passage pairs.
+2. **Generator**: Once you have the right passages, the generator reads them and writes an answer. It is GPT-2 (124M), fine-tuned on `Question / Context / Answer` prompts.
 
-By splitting the problem into these parts, we make the system fast, accurate, and easy to maintain.
+Splitting the problem this way means each part can be trained and improved on its own.
 
 ---
 
@@ -25,8 +25,12 @@ By splitting the problem into these parts, we make the system fast, accurate, an
 
 ## Files in This Repo
 
-* `QnA_System.ipynb`: The main Jupyter Notebook with all the code steps, data loading, model training, and evaluation.
-* `requirements.txt`: Lists Python libraries you need (e.g., `transformers`, `faiss`, `nltk`).
+* `QnA_System.ipynb`: The main Jupyter Notebook (written for Google Colab with a GPU). It covers dataset download, retriever training and evaluation, generator training and evaluation, and writing the prediction CSVs.
+* `requirements.txt`: The Python libraries the notebook imports (`sentence-transformers`, `transformers`, `datasets`, `torch`, `nltk`, and others).
+* `download (3).png`: A diagram of the RAG pipeline.
+* `download (2).png`: A slide explaining the contrastive (InfoNCE) loss, which is the idea behind the retriever's loss. The slide is from A. Maier et al., FAU Erlangen-Nürnberg.
+
+The dataset (`kaggle_3_documents.csv`, `kaggle_3_train.csv`, `kaggle_3_test.csv`) is not in the repo. The first cells of the notebook download it.
 
 ---
 
@@ -35,7 +39,7 @@ By splitting the problem into these parts, we make the system fast, accurate, an
 1. **Clone the repo**
 
    ```bash
-   git clone https://github.com/yourusername/QnA_System.git
+   git clone https://github.com/VineetGK/QnA_System.git
    cd QnA_System
    ```
 2. **Set up a virtual environment** (optional but recommended)
@@ -43,7 +47,7 @@ By splitting the problem into these parts, we make the system fast, accurate, an
    ```bash
    python -m venv venv
    source venv/bin/activate  # macOS/Linux
-   venv\\Scripts\\activate  # Windows
+   venv\Scripts\activate  # Windows
    ```
 3. **Install dependencies**
 
@@ -61,12 +65,13 @@ By splitting the problem into these parts, we make the system fast, accurate, an
    jupyter notebook QnA_System.ipynb
    ```
 
-2. **Run each cell** in order:
+2. **Run each cell** in order. A GPU is strongly recommended. The notebook:
 
-   * Load and preprocess documents
-   * Build or load the retriever (using embeddings + similarity search)
-   * Build or load the generator (fine-tuned language model)
-   * Evaluate the system with precision, recall, and BLEU scores
+   * Downloads and loads the documents and the train/test questions.
+   * Splits the training questions into a training split and a held-out validation split (90/10).
+   * Fine-tunes the retriever on the training split and reports recall@10, precision@10 and MRR on the validation split.
+   * Fine-tunes the GPT-2 generator on the training split. Long contexts are truncated so the answer always fits in 1024 tokens. It reports word-level BLEU on the validation split.
+   * Retrieves passages for the test questions, generates answers, and writes `stage_1_prediction.csv` and `simple_baseline1.csv`.
 
 3. **Ask your own questions** by modifying the notebook’s test section.
 
@@ -80,17 +85,29 @@ By splitting the problem into these parts, we make the system fast, accurate, an
 * **Recall (Retriever)**: Out of all the pages that should have been found, how many did the system actually find?
   *Formula: TP / (TP + FN)*
 
-* **BLEU (Generator)**: How close is the generated answer to the real answer on a scale from 0 to 1?
+* **BLEU (Generator)**: Word-level corpus BLEU between generated and reference answers, from 0 to 1.
 
 * **Overall Score**: The average of Precision, Recall, and BLEU. This gives one number to compare different versions.
+
+---
+
+## Results
+
+> **Note:** The outputs saved in the notebook predate several bug fixes, so its numbers should not be quoted. Before the fixes:
+> * retriever metrics were computed on rows it had been trained on;
+> * BLEU was character-level and computed on 5 training rows;
+> * training answers were cut off at 1024 tokens;
+> * test-time prediction received an empty context.
+>
+> Re-run the notebook to get valid held-out metrics.
 
 ---
 
 ## Next Steps
 
 * Try different retriever models (e.g., dense vs. sparse embeddings).
-* Fine-tune the generator on your own Q\&A data.
-* Experiment with more documents to see how it scales!
+* Use an instruction-tuned or larger generator (with LoRA/QLoRA fine-tuning).
+* Batch generation on the GPU to speed up predictions.
 
 ---
 
@@ -99,5 +116,3 @@ By splitting the problem into these parts, we make the system fast, accurate, an
 Contributions are welcome! Feel free to open an issue or submit a pull request with improvements.
 
 ---
-
-
